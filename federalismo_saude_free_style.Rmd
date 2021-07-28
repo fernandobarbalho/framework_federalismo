@@ -1,0 +1,566 @@
+---
+title: "Saúde pública"
+subtitle: "Achados sobre federalismo fiscal"
+output:
+  prettydoc::html_pretty:
+    theme: cayman
+    highlight: github
+---
+```{r}
+
+```
+
+```{r setup}
+
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message = FALSE)
+```
+
+
+```{r cover, fig.show = "hold", out.width = "100%", fig.align = "default", echo=FALSE}
+
+knitr::include_graphics("hush-naidoo-pA0uoltkwao-unsplash.jpg")
+
+```
+<div align="center"> <font size="1"> Foto por Hush Naidoo em [Unsplash](https://unsplash.com/photos/pA0uoltkwao) </font></div>
+
+
+</br>
+
+## A saúde como direito e atribuições do Estado
+
+
+O direito à saúde foi inserido na Constituição Federal de 1988 no título destinado à ordem social, que tem como objetivo o bem-estar e a justiça social. Nessa perspectiva, a Constituição Federal de 1988, no seu Art. 6º, estabelece como direitos sociais fundamentais a educação, a saúde, o trabalho, o lazer, a segurança, a previdência social, a proteção à maternidade e à infância.
+
+Em seguida, no Art. 196, a Constituição Federal de 1988 reconhece a saúde como direito de todos e dever do Estado, garantido mediante políticas sociais e econômicas que visem à redução do risco de doença e de outros agravos e ao acesso universal e igualitário às ações e serviços para sua promoção, proteção e recuperação.
+
+No sistema federativo fiscal brasileiro a saúde pública é tema peculiar nos debates. Seja pela distribuição das responsabilidades e custeios entre os três níveis da federação, seja por obrigatoriedades de gastos mínimos, ou ainda nas análises referentes às desigualdades regionais que ao final acabam por trazer impactos sobre a oferta e qualidade dos serviços de saúde pública. 
+
+## A saúde pública nos três níveis federativos
+
+Uma primeira análise que podemos fazer é situar a atuação dos três níveis federativos dentro das atribuições dos gastos por função.
+
+Vamos usar como referência os dados extraídos do aplicativo [Meu SICONFI](https://meusiconfi.tesouro.gov.br/Interface_rsiconfi.rmd). Os dados são referentes a despesas com todas as funções de governo para os três níveis federativos referentes ao ano de 2020.
+
+Vamos inicialmente carregar cada uma das tabelas
+
+- Dados da União
+
+```{r}
+library(readr)
+dados_uniao_todos_2020 <- read_csv("dados_uniao_todos_2020.csv")
+```
+
+- Dados dos estados
+
+```{r}
+dados_estados_todos_2020 <- read_csv("dados_estados_todos_2020.csv")
+```
+
+- Dados dos municípios
+
+```{r}
+dados_municipios_todos_2020 <- read_delim("dados_municipios_todos_2020.csv", 
+    ";", escape_double = FALSE, locale = locale(decimal_mark = ",", 
+        grouping_mark = "."), trim_ws = TRUE) 
+ 
+```
+
+
+E agora conheceremos um pouco esses dados.
+
+
+Começando com os dados de gastos da união
+```{r}
+summary (dados_uniao_todos_2020 )
+
+head(dados_uniao_todos_2020)
+```
+
+Agora os dados dos estados
+
+```{r}
+summary( dados_estados_todos_2020)
+
+head(dados_estados_todos_2020)
+```
+
+Por fim, os dados dos municípios
+
+```{r}
+summary(dados_municipios_todos_2020)
+
+head(dados_municipios_todos_2020)
+```
+
+Agora que já fomos apresentados às tabelas, já podemos fazer uma análise mostrando o papel da Educação nos gastos públicos para os três niveis federativos. Vamos usar gráficos para fazer essas análises.
+
+Primeiro a posição da saúde no ranking total
+
+```{r}
+
+library(dplyr)
+library(ggplot2)
+library(viridis)
+
+dados_uniao_todos_2020 %>%
+  bind_rows(dados_estados_todos_2020,
+            dados_municipios_todos_2020) %>% #uso de bind_rows para gerar um único dataframe com todos os dados dos três níveis federativos
+  dplyr::group_by(CO_ESFERA,  funcao) %>%
+  summarise(
+    total_funcao_esfera = sum(VALUE)
+  ) %>%
+  ungroup() %>%
+  mutate(funcao= reorder(funcao, total_funcao_esfera)) %>%
+  mutate(esfera = case_when(
+    CO_ESFERA == "U" ~ "União",
+    CO_ESFERA == "E" ~ "Estados",
+    CO_ESFERA == "M" ~ "Municípios"
+  ))%>%
+  ggplot() +
+  geom_col(aes(y=funcao, x=total_funcao_esfera, fill= esfera )) +
+  theme_light()+
+  scale_fill_viridis(discrete = TRUE)
+  
+  
+  
+  
+```
+
+Em seguida, deixando mais claro o percentual de cada esfera na participação dos gastos em saúde
+
+```{r}
+dados_uniao_todos_2020 %>%
+  bind_rows(dados_estados_todos_2020,
+            dados_municipios_todos_2020) %>% #uso de bind_rows para gerar um único dataframe com todos os dados dos três níveis federativos
+  dplyr::group_by(CO_ESFERA,  funcao) %>%
+  summarise(
+    total_funcao_esfera = sum(VALUE)
+  ) %>%
+  ungroup() %>%
+  mutate(funcao= reorder(funcao, total_funcao_esfera)) %>%
+  mutate(esfera = case_when(
+    CO_ESFERA == "U" ~ "União",
+    CO_ESFERA == "E" ~ "Estados",
+    CO_ESFERA == "M" ~ "Municípios"
+  ))%>%
+  ggplot() +
+  geom_col(aes(y=funcao, x=total_funcao_esfera, fill= esfera ), position = "fill") + #position = "fill" permite focar na distribuição perentual dos gastos pelas três esferas de poder
+  theme_light()+
+  theme(
+    panel.grid =  element_blank()
+  )+
+  scale_fill_viridis(discrete = TRUE)
+
+```
+
+
+## A distrbuição dos gastos nos municípios
+
+
+Para o ano de 2020
+```{r}
+
+
+
+dados_municipios_todos_2020 %>%
+  group_by(ID_ENTE, funcao) %>%
+  summarise(
+    total_funcao = sum(VALUE)
+  ) %>%
+  inner_join(
+    dados_municipios_todos_2020 %>%
+      group_by(ID_ENTE) %>%
+      summarise(
+        total_desp_mun = sum(VALUE)
+      )
+  ) %>%
+  mutate(perc_funcao = (total_funcao/ total_desp_mun)*100)  %>%
+  ggplot()+
+  geom_jitter(aes(y=funcao, x=perc_funcao, fill= funcao), color= "white", pch= 21, alpha= 0.3, legend= FALSE )+
+  theme_light()+
+  theme(
+    panel.grid =  element_blank(),
+    legend.position = "none"
+  )+
+  scale_fill_viridis(discrete = TRUE)
+
+
+```
+
+
+Para o ano de 2019 (jitter)
+
+```{r}
+despesas_mun_tudo <- read_delim("despesas_mun_tudo.csv", 
+     ";", escape_double = FALSE, locale = locale(decimal_mark = ",", 
+         grouping_mark = "."), trim_ws = TRUE)
+
+
+
+despesas_mun_tudo %>%
+  group_by(ID_ENTE, funcao) %>%
+  summarise(
+    total_funcao = sum(VALUE)
+  ) %>%
+  inner_join(
+    despesas_mun_tudo %>%
+      group_by(ID_ENTE) %>%
+      summarise(
+        total_desp_mun = sum(VALUE)
+      )
+  ) %>%
+  mutate(perc_funcao = (total_funcao/ total_desp_mun)*100)  %>%
+  ggplot()+
+   geom_jitter(aes(y=funcao, x=perc_funcao, fill= funcao), color= "white", pch= 21, alpha= 0.3, legend= FALSE )+
+  theme_light()+
+  theme(
+    panel.grid =  element_blank(),
+    legend.position = "none"
+  )+
+  scale_fill_viridis(discrete = TRUE)
+```
+
+
+Para o ano de 2019 (box-plot)
+
+```{r}
+
+despesas_mun_tudo %>%
+  group_by(ID_ENTE, funcao) %>%
+  summarise(
+    total_funcao = sum(VALUE)
+  ) %>%
+  inner_join(
+    despesas_mun_tudo %>%
+      group_by(ID_ENTE) %>%
+      summarise(
+        total_desp_mun = sum(VALUE)
+      )
+  ) %>%
+  mutate(perc_funcao = (total_funcao/ total_desp_mun)*100)  %>%
+  ggplot()+
+  geom_boxplot(aes(y=funcao, x=perc_funcao))+  
+  theme_light()+
+  theme(
+    panel.grid =  element_blank()
+  )
+
+```
+
+
+As medidas de centralidade para o ano de 2019 para educação e saúde
+
+```{r}
+
+ despesas_mun_tudo %>%
+  dplyr::filter(funcao %in% c("Educação","Saúde")) %>%
+  group_by(ID_ENTE, funcao) %>%
+  summarise(
+    total_funcao = sum(VALUE)
+  ) %>%
+  inner_join(
+    despesas_mun_tudo %>%
+      group_by(ID_ENTE) %>%
+      summarise(
+        total_desp_mun = sum(VALUE)
+      )
+  ) %>%
+  mutate(perc_funcao = (total_funcao/ total_desp_mun)*100) %>%
+  group_by(funcao) %>%
+  summarise(
+    media= mean(perc_funcao),
+    mediana = median(perc_funcao)
+  )
+  
+  
+
+```
+
+
+Comparação de gastos de saúde com administração
+
+```{r}
+ despesas_mun_tudo %>%
+  dplyr::filter(funcao %in% c("Administração","Saúde")) %>%
+  group_by(ID_ENTE, funcao) %>%
+  summarise(
+    total_funcao = sum(VALUE)
+  ) %>%
+  inner_join(
+    despesas_mun_tudo %>%
+      group_by(ID_ENTE) %>%
+      summarise(
+        total_desp_mun = sum(VALUE)
+      )
+  ) %>%
+  mutate(perc_funcao = (total_funcao/ total_desp_mun)*100) %>%
+  group_by(funcao) %>%
+  summarise(
+    media= mean(perc_funcao),
+    mediana = median(perc_funcao)
+  )
+
+```
+
+
+Agora num gráfico de dispersão
+
+```{r}
+
+  
+ saude_adm<-
+ despesas_mun_tudo %>%
+  dplyr::filter(funcao %in% c("Administração","Saúde")) %>%
+  group_by(ID_ENTE, funcao) %>%
+  summarise(
+    total_funcao = sum(VALUE)
+  ) %>%
+  ungroup() %>%
+  inner_join(
+    despesas_mun_tudo %>%
+      group_by(ID_ENTE) %>%
+      summarise(
+        total_desp_mun = sum(VALUE)
+      )
+  ) %>%
+  mutate(perc_funcao = (total_funcao/ total_desp_mun)*100) %>%
+  select(ID_ENTE, funcao, perc_funcao) %>%
+  pivot_wider(names_from = funcao, values_from = perc_funcao)
+
+  saude_adm %>%
+  ggplot() +
+  geom_point(aes(x=Administração, y= Saúde), fill= "black", color= "white", pch=21, alpha = 0.3) +
+    theme_light()
+
+```
+
+
+Cálculo da correlação entre gastos com administração e saúde
+
+```{r}
+cor(saude_adm$Administração, saude_adm$Saúde, use="pairwise.complete.obs")
+```
+
+
+Criar clusters de municípios pelos gastos simultâneos em saúde e administração
+
+```{r}
+
+sil_cluster<- function(k){
+  print(k)
+  model<-pam(saude_adm[2:3], k=k)
+  model$silinfo$avg.width
+}
+
+silinfo <-
+  map_dbl(2:5,sil_cluster)
+
+model<- pam(saude_adm[2:3], k=4)
+
+model$silinfo$clus.avg.widths
+
+saude_adm$cluster<- model$clustering
+
+saude_adm %>%
+  ggplot() +
+  geom_point(aes(x=Administração, y= Saúde, fill=factor(cluster)), color= "white", pch=21, alpha = 0.7) +
+    theme_light()+
+  scale_fill_viridis(discrete = TRUE)
+
+
+
+
+
+```
+
+
+Identificação das medoides dos clusters
+
+```{r}
+
+library(ggrepel)
+(medoids_cluster<-
+  saude_adm[model$id.med,])
+
+
+
+```
+
+
+```{r}
+saude_adm %>%
+  ggplot() +
+  geom_point(aes(x=Administração, y= Saúde, fill=factor(cluster)), color= "white", pch=21, alpha = 0.7) +
+  geom_point(data= medoids_cluster, aes(x=Administração, y= Saúde), fill="black", color= "white", pch=21, alpha = 1,size =2)+
+    theme_light()+
+  scale_fill_viridis(discrete = TRUE) +
+  labs(
+    fill = "cluster"
+  )
+
+```
+
+## As sub-funções dos gastos de saúde
+
+A distribuição das sub-funções nos três níveis federativos
+
+```{r}
+
+library(readr)
+library(viridis)
+
+sub_funcao_saude_Uniao_2019 <- read_csv("sub_funcao_saude_Uniao_2019.csv")
+sub_funcao_saude_UF_2019 <- read_csv("sub_funcao_saude_UF_2019.csv")
+sub_funcao_saude_Municipios_2019 <- read_delim("sub_funcao_saude_Municipios_2019.csv", 
+    ";", escape_double = FALSE, locale = locale(decimal_mark = ",", 
+        grouping_mark = "."), trim_ws = TRUE)
+
+
+
+
+sub_funcao_saude_Uniao_2019 %>%
+  mutate(Esfera = "União") %>%
+  select(Esfera,sub_funcao, VALUE) %>%
+  bind_rows(
+    sub_funcao_saude_UF_2019 %>%
+      mutate(Esfera = "Estados") %>%
+      select(Esfera,sub_funcao, VALUE),
+    sub_funcao_saude_Municipios_2019 %>%
+      mutate(Esfera = "Municípios") %>%
+      select(Esfera,sub_funcao, VALUE)
+  ) %>%
+  group_by(Esfera,sub_funcao) %>%
+  summarise(
+    valor_total = sum(VALUE)
+  ) %>%
+  ungroup() %>%
+  mutate(sub_funcao = reorder(sub_funcao,valor_total)) %>%
+  ggplot() +
+  geom_col(aes(y=Esfera , x=valor_total, fill= sub_funcao), position = "fill") +
+  scale_fill_viridis(discrete = TRUE) +
+  theme_light() +
+  theme(
+    panel.grid = element_blank()
+  )
+  
+
+```
+
+```{r}
+sub_funcao_saude_Uniao_2019 %>%
+  mutate(Esfera = "União") %>%
+  select(Esfera,sub_funcao, VALUE) %>%
+  bind_rows(
+    sub_funcao_saude_UF_2019 %>%
+      mutate(Esfera = "Estados") %>%
+      select(Esfera,sub_funcao, VALUE),
+    sub_funcao_saude_Municipios_2019 %>%
+      mutate(Esfera = "Municípios") %>%
+      select(Esfera,sub_funcao, VALUE)
+  ) %>%
+  group_by(Esfera,sub_funcao) %>%
+  summarise(
+    valor_total = sum(VALUE)
+  ) %>%
+  ungroup() %>%
+  mutate(sub_funcao = reorder(sub_funcao,valor_total)) %>%
+  ggplot() +
+  geom_col(aes(y=sub_funcao , x=valor_total/10^6, fill= Esfera)) +
+  scale_fill_viridis(discrete = TRUE)+
+  scale_x_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE))+
+  theme_light() +
+  theme(
+    panel.grid = element_blank()
+  )+
+  labs(
+    x= "Gasto em R$ (mi)"
+  )
+
+```
+
+
+
+```{r}
+sub_funcao_saude_Uniao_2019 %>%
+  mutate(Esfera = "União") %>%
+  select(Esfera,sub_funcao, VALUE) %>%
+  bind_rows(
+    sub_funcao_saude_UF_2019 %>%
+      mutate(Esfera = "Estados") %>%
+      select(Esfera,sub_funcao, VALUE),
+    sub_funcao_saude_Municipios_2019 %>%
+      mutate(Esfera = "Municípios") %>%
+      select(Esfera,sub_funcao, VALUE)
+  ) %>%
+  group_by(Esfera,sub_funcao) %>%
+  summarise(
+    valor_total = sum(VALUE)
+  ) %>%
+  ungroup() %>%
+  mutate(sub_funcao = reorder(sub_funcao,valor_total)) %>%
+  ggplot() +
+  geom_col(aes(y=sub_funcao , x=valor_total/10^6)) +
+  scale_fill_viridis(discrete = TRUE)+
+  facet_wrap(Esfera~.,scales = "free_x")+
+  theme_light() +
+  theme(
+    panel.grid = element_blank()
+  )+
+  scale_x_continuous(labels=function(x) format(x, big.mark = ".", scientific = FALSE))+
+  labs(
+    x= "Gasto em R$ (mi)"
+  )
+
+```
+
+
+Distribuição dos gastos de sub-funções entre os municípios
+
+```{r}
+sub_funcao_saude_Municipios_2019 %>%
+  group_by(ID_ENTE, sub_funcao) %>%
+  summarise(
+    total_sub_funcao = sum(VALUE)
+  ) %>%
+  inner_join(
+    sub_funcao_saude_Municipios_2019 %>%
+      group_by(ID_ENTE) %>%
+      summarise(
+        total_funcao = sum(VALUE)
+      )
+  ) %>%
+  ungroup() %>%
+  mutate(perc_sub_funcao =(total_sub_funcao /total_funcao)*100) %>%
+  ggplot()+
+  geom_jitter(aes(y=sub_funcao, x=perc_sub_funcao), fill= "black",color= "white", pch= 21, alpha= 0.3) +
+  theme_light() +
+  theme(
+    panel.grid = element_blank()
+  )
+```
+
+
+```{r}
+sub_funcao_saude_Municipios_2019 %>%
+  group_by(ID_ENTE, sub_funcao) %>%
+  summarise(
+    total_sub_funcao = sum(VALUE)
+  ) %>%
+  inner_join(
+    sub_funcao_saude_Municipios_2019 %>%
+      group_by(ID_ENTE) %>%
+      summarise(
+        total_funcao = sum(VALUE)
+      )
+  ) %>%
+  ungroup() %>%
+  mutate(perc_sub_funcao =(total_sub_funcao /total_funcao)*100) %>%
+  ggplot()+
+  geom_boxplot(aes(y=sub_funcao, x=perc_sub_funcao)) +
+  theme_light() +
+  theme(
+    panel.grid = element_blank()
+  )
+```
+
+
